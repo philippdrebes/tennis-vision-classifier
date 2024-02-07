@@ -1,2 +1,4 @@
 venv
 /video
+.DS_Store
+
