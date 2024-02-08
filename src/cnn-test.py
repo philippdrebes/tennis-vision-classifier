@@ -50,13 +50,16 @@ class SimpleCNN(nn.Module):
         self.fc1 = nn.Linear(128 * 28 * 28, 512)
         self.fc2 = nn.Linear(512, 2)
         self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.25)
 
     def forward(self, x):
         x = self.pool(self.relu(self.conv1(x)))
         x = self.pool(self.relu(self.conv2(x)))
         x = self.pool(self.relu(self.conv3(x)))
         x = torch.flatten(x, 1)
+        x = self.dropout(x)
         x = self.relu(self.fc1(x))
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -171,8 +174,9 @@ accuracy = correct_predictions / total_predictions * 100
 print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.2f}%')
 
 # Compute confusion matrix
+class_names = ['playing', 'waiting']
 cm = confusion_matrix(all_labels, all_predictions)
-disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
 disp.plot(cmap=plt.cm.Blues)
 plt.title('Confusion Matrix')
 plt.show()
