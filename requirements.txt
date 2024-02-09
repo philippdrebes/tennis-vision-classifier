@@ -4,5 +4,6 @@ numpy
 matplotlib
 torch
 torchvision
+ray[tune]
 tqdm
 scikit-learn
