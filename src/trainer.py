@@ -78,8 +78,8 @@ def train_tennis(config, data_dir=None):
     train_dataset, val_dataset = torch.utils.data.random_split(trainset, [train_size, val_size])
 
     # Create data loaders
-    trainloader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=8)
-    valloader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False, num_workers=8)
+    trainloader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, num_workers=2)
+    valloader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False, num_workers=2)
 
     for epoch in range(10):  # loop over the dataset multiple times
         running_loss = 0.0
@@ -140,6 +140,105 @@ def train_tennis(config, data_dir=None):
     print("Finished Training")
 
 
+def test_accuracy(net, device="cpu"):
+    data_dir = os.path.abspath("../video/frames")
+    trainset, testset = load_data(data_dir)
+    testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
+
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data in testloader:
+            images, labels = data
+            images, labels = images.to(device), labels.to(device)
+            outputs = net(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    return correct / total
+
+
+def plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies):
+    epochs = range(1, len(train_losses) + 1)
+    plt.figure(figsize=(12, 4))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_losses, 'bo-', label='Training Loss')
+    plt.plot(epochs, val_losses, 'ro-', label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_accuracies, 'bo-', label='Training Accuracy')
+    plt.plot(epochs, val_accuracies, 'ro-', label='Validation Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+def main(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
+    data_dir = os.path.abspath("../video/frames")
+    load_data(data_dir)
+    config = {
+        "l1": tune.choice([2 ** i for i in range(5, 10)]),
+        "l2": tune.choice([2 ** i for i in range(5, 10)]),
+        "lr": tune.loguniform(1e-4, 1e-1),
+        "weight_decay": tune.loguniform(1e-6, 1e-3),
+        "batch_size": tune.choice([2, 4, 8, 16, 32]),
+    }
+    scheduler = ASHAScheduler(
+        max_t=max_num_epochs,
+        grace_period=1,
+        reduction_factor=2)
+    tuner = tune.Tuner(
+        tune.with_resources(
+            tune.with_parameters(partial(train_tennis, data_dir=data_dir)),
+            resources={"cpu": 2, "gpu": gpus_per_trial}
+        ),
+        tune_config=tune.TuneConfig(
+            metric="loss",
+            mode="min",
+            scheduler=scheduler,
+            num_samples=num_samples,
+        ),
+        param_space=config,
+    )
+    results = tuner.fit()
+
+    best_trial = results.get_best_result("loss", "min", "last")
+    print("Best trial config: {}".format(best_trial.config))
+    print("Best trial final validation loss: {}".format(best_trial.metrics["loss"]))
+    print("Best trial final validation accuracy: {}".format(best_trial.metrics["accuracy"]))
+
+    best_trained_model = TennisCNN(best_trial.config["l1"], best_trial.config["l2"])
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda:0"
+        if gpus_per_trial > 1:
+            best_trained_model = nn.DataParallel(best_trained_model)
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    best_trained_model.to(device)
+
+    checkpoint_path = os.path.join(best_trial.checkpoint.to_directory(), "checkpoint.pt")
+
+    model_state, optimizer_state = torch.load(checkpoint_path)
+    best_trained_model.load_state_dict(model_state)
+
+    test_acc = test_accuracy(best_trained_model, device)
+    print("Best trial test set accuracy: {}".format(test_acc))
+
+
+if __name__ == "__main__":
+    main(num_samples=20, max_num_epochs=10, gpus_per_trial=0)
+
 # train_losses = []
 # val_losses = []
 # train_accuracies = []
@@ -193,106 +292,6 @@ def train_tennis(config, data_dir=None):
 #           f'Validation Loss: {val_losses[-1]:.4f}, Validation Accuracy: {val_accuracies[-1]:.2f}%')
 #
 # torch.save(model.state_dict(), "model.pth")
-
-
-def test_accuracy(net, device="cpu"):
-    trainset, testset = load_data()
-    testloader = DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
-
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            images, labels = images.to(device), labels.to(device)
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    return correct / total
-
-
-def plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies):
-    epochs = range(1, len(train_losses) + 1)
-    plt.figure(figsize=(12, 4))
-
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs, train_losses, 'bo-', label='Training Loss')
-    plt.plot(epochs, val_losses, 'ro-', label='Validation Loss')
-    plt.title('Training and Validation Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs, train_accuracies, 'bo-', label='Training Accuracy')
-    plt.plot(epochs, val_accuracies, 'ro-', label='Validation Accuracy')
-    plt.title('Training and Validation Accuracy')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy (%)')
-    plt.legend()
-
-    plt.tight_layout()
-    plt.show()
-
-
-def main(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
-    data_dir = os.path.abspath("../video/frames")
-    load_data(data_dir)
-    config = {
-        "l1": tune.choice([2 ** i for i in range(10)]),
-        "l2": tune.choice([2 ** i for i in range(10)]),
-        "lr": tune.loguniform(1e-4, 1e-1),
-        "weight_decay": tune.loguniform(1e-6, 1e-3),
-        "batch_size": tune.choice([2, 4, 8, 16, 32]),
-    }
-    scheduler = ASHAScheduler(
-        max_t=max_num_epochs,
-        grace_period=1,
-        reduction_factor=2)
-    tuner = tune.Tuner(
-        tune.with_resources(
-            tune.with_parameters(partial(train_tennis, data_dir=data_dir)),
-            resources={"cpu": 2, "gpu": gpus_per_trial}
-        ),
-        tune_config=tune.TuneConfig(
-            metric="loss",
-            mode="min",
-            scheduler=scheduler,
-            num_samples=num_samples,
-        ),
-        param_space=config,
-    )
-    results = tuner.fit()
-
-    best_trial = results.get_best_result("loss", "min", "last")
-    print(f"Best trial config: {best_trial.config}")
-    print(f"Best trial final validation loss: {best_trial.last_result['loss']}")
-    print(f"Best trial final validation accuracy: {best_trial.last_result['accuracy']}")
-
-    best_trained_model = TennisCNN(best_trial.config["l1"], best_trial.config["l2"])
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda:0"
-        if gpus_per_trial > 1:
-            best_trained_model = nn.DataParallel(best_trained_model)
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-    best_trained_model.to(device)
-
-    best_checkpoint = best_trial.checkpoint.to_air_checkpoint()
-    best_checkpoint_data = best_checkpoint.to_dict()
-
-    best_trained_model.load_state_dict(best_checkpoint_data["net_state_dict"])
-
-    test_acc = test_accuracy(best_trained_model, device)
-    print("Best trial test set accuracy: {}".format(test_acc))
-
-
-if __name__ == "__main__":
-    main(num_samples=10, max_num_epochs=10, gpus_per_trial=0)
-
 # Call the function to plot metrics
 # plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies)
 
