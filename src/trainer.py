@@ -147,14 +147,26 @@ def test_accuracy(net, device="cpu"):
 
     correct = 0
     total = 0
+    all_predictions = []
+    all_labels = []
     with torch.no_grad():
         for data in testloader:
             images, labels = data
             images, labels = images.to(device), labels.to(device)
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
+            all_predictions.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+
+    # Compute confusion matrix
+    class_names = ['playing', 'waiting']
+    cm = confusion_matrix(all_labels, all_predictions)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title('Confusion Matrix')
+    plt.show()
 
     return correct / total
 
@@ -320,11 +332,3 @@ if __name__ == "__main__":
 # avg_test_loss = test_loss / len(test_loader)
 # accuracy = correct_predictions / total_predictions * 100
 # print(f'Test Loss: {avg_test_loss:.4f}, Accuracy: {accuracy:.2f}%')
-#
-# # Compute confusion matrix
-# class_names = ['playing', 'waiting']
-# cm = confusion_matrix(all_labels, all_predictions)
-# disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
-# disp.plot(cmap=plt.cm.Blues)
-# plt.title('Confusion Matrix')
-# plt.show()

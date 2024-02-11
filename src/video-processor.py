@@ -16,8 +16,9 @@ transform = transforms.Compose([
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Using {device} device")
 
-model = TennisCNN().to(device)
-model.load_state_dict(torch.load('model.pth', map_location=device))
+model = TennisCNN(512, 256).to(device)
+model_state, optimizer_state = torch.load('model.pth', map_location=device)
+model.load_state_dict(model_state)
 model = model.to(device)
 model.eval()
 print("Model loaded.")
@@ -91,7 +92,7 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
         if show_timecode:
             # Calculate and overlay timecode
             timecode = frame_to_timecode(frame_count, fps)
-            cv2.putText(out_frame, timecode, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
+            cv2.putText(out_frame, timecode, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
         out.write(out_frame)
         pbar.update(1)
