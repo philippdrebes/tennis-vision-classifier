@@ -6,9 +6,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import ray
 from ray import train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
@@ -196,6 +196,9 @@ def plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies):
 
 
 def main(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
+    context = ray.init()
+    print(context.dashboard_url)
+
     data_dir = os.path.abspath("../video/frames")
     load_data(data_dir)
     config = {

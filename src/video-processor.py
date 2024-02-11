@@ -3,6 +3,7 @@ import torch
 from torchvision import transforms
 from tqdm import tqdm
 import numpy as np
+from pytorch2tikz import Architecture
 
 from src.cnn import TennisCNN
 
@@ -25,6 +26,7 @@ print("Model loaded.")
 
 video_path = 'test.mp4'
 output_video_path = 'out.mp4'
+output_video_with_overlay_path = 'out_overlay.mp4'
 
 cap = cv2.VideoCapture(video_path)
 if not cap.isOpened():
@@ -39,7 +41,9 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 
 # Define the codec and create a VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # For MP4 file
+fourcc2 = cv2.VideoWriter_fourcc(*'mp4v')  # For MP4 file
 out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
+out_overlay = cv2.VideoWriter(output_video_with_overlay_path, fourcc2, fps, (frame_width, frame_height))
 
 target_class_index = 0  # Replace X with the index of your target class
 
@@ -48,6 +52,8 @@ pip_position = (20, 20)
 
 show_pip = True
 show_timecode = True
+
+# arch = Architecture(model)
 
 
 def frame_to_timecode(frame_number, fps):
@@ -77,24 +83,25 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
         _, predicted = torch.max(outputs, 1)
 
         if predicted.item() == target_class_index:
-            out_frame = frame
+            out.write(frame)
+            out_frame_with_overlay = frame
             saved_frame_count += 1
         else:
             black_frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
-            out_frame = black_frame
+            out_frame_with_overlay = black_frame
 
         if show_pip:
             # Overlay PiP
             pip_image = cv2.resize(frame, pip_size, interpolation=cv2.INTER_AREA)
             x_offset, y_offset = pip_position
-            out_frame[y_offset:y_offset + pip_size[1], x_offset:x_offset + pip_size[0]] = pip_image
+            out_frame_with_overlay[y_offset:y_offset + pip_size[1], x_offset:x_offset + pip_size[0]] = pip_image
 
         if show_timecode:
             # Calculate and overlay timecode
             timecode = frame_to_timecode(frame_count, fps)
-            cv2.putText(out_frame, timecode, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(out_frame_with_overlay, timecode, (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-        out.write(out_frame)
+        out_overlay.write(out_frame_with_overlay)
         pbar.update(1)
 
 print(
@@ -103,4 +110,7 @@ print(
 # Release everything when job is finished
 cap.release()
 out.release()
+out_overlay.release()
 cv2.destroyAllWindows()
+
+# arch.save('out.tex')
