@@ -4,6 +4,8 @@ numpy
 matplotlib
 torch
 torchvision
-ray[tune]
+ray[default,tune]
 tqdm
 scikit-learn
+pytorch2tikz
+imageio
