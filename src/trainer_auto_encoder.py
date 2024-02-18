@@ -60,9 +60,9 @@ def train_tennis_autoencoder(config, data_dir=None):
     (trainset, testset) = load_data_autoencoder(data_dir)
 
     # Splitting dataset into train and validation
-    train_size = int(0.8 * len(trainset))
-    val_size = len(trainset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(trainset, [train_size, val_size])
+    # train_size = int(0.8 * len(trainset))
+    # val_size = len(trainset) - train_size
+    # train_dataset, val_dataset = torch.utils.data.random_split(trainset, [train_size, val_size])
 
     # Filter for 'playing' class images
     playing_class_index = trainset.class_to_idx['play']
@@ -71,7 +71,7 @@ def train_tennis_autoencoder(config, data_dir=None):
 
     # Create data loaders
     trainloader = DataLoader(trainset_filtered, batch_size=config["batch_size"], shuffle=True)
-    valloader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
+    # valloader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
 
     metrics = defaultdict(list)
 
@@ -107,7 +107,7 @@ def train_tennis_autoencoder(config, data_dir=None):
     net.eval()
     loss_dist = []
     with torch.no_grad():
-        tkt = tqdm(val_dataset)
+        tkt = tqdm(testset)
         for i, (images, labels) in enumerate(tkt):
             x = images.to(device)
             y = net(x)
@@ -121,8 +121,8 @@ def train_tennis_autoencoder(config, data_dir=None):
     plt.axvline(0.3, 0.0, 1)
     plt.show()
 
-    lower_threshold = 0.2
-    upper_threshold = 1.3
+    lower_threshold = 0.1
+    upper_threshold = 1.1
     plt.figure(figsize=(12, 6))
     plt.title('Loss Distribution')
     sns.displot(loss_dist, bins=100, kde=True, color='blue')
@@ -131,7 +131,7 @@ def train_tennis_autoencoder(config, data_dir=None):
     plt.show()
 
     # You'll need actual labels for your validation images to use them here
-    true_labels = [label for _, label in val_dataset]
+    true_labels = [label for _, label in testset]
 
     # Determine predictions based on loss threshold
     predictions = [1 if loss >= upper_threshold else 0 for loss in loss_dist]
@@ -190,10 +190,10 @@ def main():
     # load_data_autoencoder(data_dir)
 
     config = {
-        "lr": 0.001,
+        "lr": 0.003,
         "weight_decay": 0.0001,
-        "batch_size": 4,
-        "epochs": 25
+        "batch_size": 32,
+        "epochs": 10
     }
 
     train_tennis_autoencoder(config, data_dir)
