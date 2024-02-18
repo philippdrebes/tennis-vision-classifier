@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import ray
@@ -43,7 +43,7 @@ def load_data(data_dir="../video/frames"):
     return dataset, dataset_test
 
 
-def train_tennis(config, data_dir=None):
+def train_tennis_cnn(config, data_dir=None):
     net = TennisCNN(config["l1"], config["l2"])
 
     device = "cpu"
@@ -214,7 +214,7 @@ def main(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
         reduction_factor=2)
     tuner = tune.Tuner(
         tune.with_resources(
-            tune.with_parameters(partial(train_tennis, data_dir=data_dir)),
+            tune.with_parameters(partial(train_tennis_cnn, data_dir=data_dir)),
             resources={"cpu": 2, "gpu": gpus_per_trial}
         ),
         tune_config=tune.TuneConfig(
