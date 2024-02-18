@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 from collections import defaultdict
 import seaborn as sns
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 from src.auto_encoder import ConvAutoencoder
 
@@ -86,8 +87,8 @@ def train_tennis_autoencoder(config, data_dir=None):
             y = inputs  # target
 
             optimizer.zero_grad()  # prepare gradients
-            oupt = net(x)  # compute output/target
-            loss_val = criterion(oupt, y)  # a tensor
+            outp = net(x)  # compute output/target
+            loss_val = criterion(outp, y)  # a tensor
             epoch_loss += loss_val.item()  # accumulate for display
             loss_val.backward()  # compute gradients
             optimizer.step()  # update weights
@@ -106,12 +107,12 @@ def train_tennis_autoencoder(config, data_dir=None):
     net.eval()
     loss_dist = []
     with torch.no_grad():
-        tkt = tqdm(valloader)
+        tkt = tqdm(val_dataset)
         for i, (images, labels) in enumerate(tkt):
             x = images.to(device)
             y = net(x)
-        loss = criterion(x.to(device), y)
-        loss_dist.append(loss.item())
+            loss = criterion(x.to(device), y)
+            loss_dist.append(loss.item())
 
     loss_sc = []
     for i in loss_dist:
@@ -120,52 +121,29 @@ def train_tennis_autoencoder(config, data_dir=None):
     plt.axvline(0.3, 0.0, 1)
     plt.show()
 
-    lower_threshold = 0.0
-    upper_threshold = 0.3
+    lower_threshold = 0.2
+    upper_threshold = 1.3
     plt.figure(figsize=(12, 6))
     plt.title('Loss Distribution')
-    sns.distplot(loss_dist, bins=100, kde=True, color='blue')
+    sns.displot(loss_dist, bins=100, kde=True, color='blue')
     plt.axvline(upper_threshold, 0.0, 10, color='r')
     plt.axvline(lower_threshold, 0.0, 10, color='b')
     plt.show()
 
-    # df = pd.read_csv('data/anom.csv', index_col=[0])
-    # ddf = pd.DataFrame(columns=df.columns)
-    # tp = 0
-    # fp = 0
-    # tn = 0
-    # fn = 0
-    # total_anom = 0
-    # for i in range(len(loss_dist)):
-    #     total_anom += df.iloc[i]['label']
-    #     if loss_dist[i] >= upper_threshold:
-    #         n_df = pd.DataFrame([df.iloc[i]])
-    #         n_df['loss'] = loss_dist[i]
-    #         ddf = pd.concat([df, n_df], sort=True)
-    #         if float(df.iloc[i]['label']) == 1.0:
-    #             tp += 1
-    #         else:
-    #             fp += 1
-    #     else:
-    #         if float(df.iloc[i]['label']) == 1.0:
-    #             fn += 1
-    #         else:
-    #             tn += 1
-    # print('[TP] {}\t[FP] {}\t[MISSED] {}'.format(tp, fp, total_anom - tp))
-    # print('[TN] {}\t[FN] {}'.format(tn, fn))
-    #
-    # conf = [[tn, fp], [fn, tp]]
-    # plt.figure()
-    # sns.heatmap(conf, annot=True, annot_kws={"size": 16}, fmt='g')
+    # You'll need actual labels for your validation images to use them here
+    true_labels = [label for _, label in val_dataset]
 
-    # with torch.no_grad():
-    #     err_list = make_err_list(net, valloader, device)
-    #     err_list.sort(key=lambda x: x[1], reverse=True)
+    # Determine predictions based on loss threshold
+    predictions = [1 if loss >= upper_threshold else 0 for loss in loss_dist]
 
-    # print("Largest reconstruction item / error: ")
-    # (idx, err) = err_list[0]
-    # print(" [%4d]  %0.4f" % (idx, err))
-    # display_digit(valloader, idx)
+    # Calculate confusion matrix
+    cm = confusion_matrix(true_labels, predictions)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Normal', 'Anomaly'])
+
+    # Display the confusion matrix
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title('Confusion Matrix')
+    plt.show()
 
 
 def make_err_list(model, dataloader, device):
@@ -214,8 +192,8 @@ def main():
     config = {
         "lr": 0.001,
         "weight_decay": 0.0001,
-        "batch_size": 8,
-        "epochs": 10
+        "batch_size": 4,
+        "epochs": 25
     }
 
     train_tennis_autoencoder(config, data_dir)
