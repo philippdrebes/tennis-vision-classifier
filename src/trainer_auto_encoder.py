@@ -72,6 +72,7 @@ def train_tennis_autoencoder(config, data_dir=None):
     # Create data loaders
     trainloader = DataLoader(trainset_filtered, batch_size=config["batch_size"], shuffle=True)
     # valloader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False)
+    testloader = DataLoader(testset, batch_size=config["batch_size"], shuffle=False)
 
     metrics = defaultdict(list)
 
@@ -107,12 +108,20 @@ def train_tennis_autoencoder(config, data_dir=None):
     net.eval()
     loss_dist = []
     with torch.no_grad():
-        tkt = tqdm(testset)
+        tkt = tqdm(testloader)
         for i, (images, labels) in enumerate(tkt):
             x = images.to(device)
             y = net(x)
-            loss = criterion(x.to(device), y)
-            loss_dist.append(loss.item())
+
+            # Iterate over each image in the batch
+            for idx in range(y.size(0)):  # y.size(0) is the batch size
+                # Select the idx-th image in batch, keeping dimension for batch size of 1
+                y_img = y[idx].unsqueeze(0)
+                x_img = x[idx].unsqueeze(0).to(device)
+
+                # Calculate loss for the single image
+                loss = criterion(x_img, y_img)
+                loss_dist.append(loss.item())
 
     loss_sc = []
     for i in loss_dist:

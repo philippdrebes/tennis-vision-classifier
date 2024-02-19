@@ -31,7 +31,7 @@ class ConvAutoencoder(nn.Module):
             self.dropout,
         )
 
-        self.flattened_size = 256 * (224 // (2 ** 4)) ** 2  # Adjust based on the encoder output
+        self.flattened_size = 256 * (224 // (2 ** 4)) ** 2
 
         self.fc = nn.Linear(self.flattened_size, 4096)
         self.fc_relu = nn.ReLU()
