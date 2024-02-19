@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -107,9 +108,11 @@ def train_tennis_autoencoder(config, data_dir=None):
     # Validation phase
     net.eval()
     loss_dist = []
+    true_labels = []
     with torch.no_grad():
         tkt = tqdm(testloader)
         for i, (images, labels) in enumerate(tkt):
+            true_labels.extend(labels.tolist())
             x = images.to(device)
             y = net(x)
 
@@ -123,6 +126,11 @@ def train_tennis_autoencoder(config, data_dir=None):
                 loss = criterion(x_img, y_img)
                 loss_dist.append(loss.item())
 
+    loss_labels_df = pd.DataFrame({
+        'loss': loss_dist,
+        'label': true_labels
+    })
+
     loss_sc = []
     for i in loss_dist:
         loss_sc.append((i, i))
@@ -133,10 +141,11 @@ def train_tennis_autoencoder(config, data_dir=None):
     lower_threshold = 0.1
     upper_threshold = 1.1
     plt.figure(figsize=(12, 6))
-    plt.title('Loss Distribution')
-    sns.displot(loss_dist, bins=100, kde=True, color='blue')
-    plt.axvline(upper_threshold, 0.0, 10, color='r')
-    plt.axvline(lower_threshold, 0.0, 10, color='b')
+    plt.title('Loss Distribution by Label')
+    sns.displot(data=loss_labels_df, x='loss', hue='label', bins=100, kde=True, fill=True, palette="tab10")
+    plt.axvline(upper_threshold, 0.0, 10, color='r', label='Upper Threshold')
+    plt.axvline(lower_threshold, 0.0, 10, color='b', label='Lower Threshold')
+    plt.legend()
     plt.show()
 
     # You'll need actual labels for your validation images to use them here
