@@ -202,7 +202,7 @@ def main():
         "lr": 0.003,
         "weight_decay": 0.0001,
         "batch_size": 32,
-        "epochs": 10
+        "epochs": 25
     }
 
     train_tennis_autoencoder(config, data_dir)
