@@ -100,6 +100,8 @@ def train_tennis_autoencoder(config, data_dir=None):
         metrics['train_loss'].append(epoch_loss)
         print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(trainloader)}")
 
+    torch.save(net.state_dict(), "autoencoder.pth")
+
     _, ax = plt.subplots(1, 1, figsize=(15, 10))
     ax.set_title('Loss')
     ax.plot(metrics['train_loss'])
@@ -142,10 +144,11 @@ def train_tennis_autoencoder(config, data_dir=None):
     upper_threshold = 1.1
     plt.figure(figsize=(12, 6))
     plt.title('Loss Distribution by Label')
-    sns.displot(data=loss_labels_df, x='loss', hue='label', bins=100, kde=True, fill=True, palette="tab10")
+    sns.displot(data=loss_labels_df, x='loss', hue='label', kde=True, fill=True, palette="tab10")
     plt.axvline(upper_threshold, 0.0, 10, color='r', label='Upper Threshold')
     plt.axvline(lower_threshold, 0.0, 10, color='b', label='Lower Threshold')
     plt.legend()
+    plt.savefig("./autoencoder/displot.png", bbox_inches='tight')
     plt.show()
 
     # You'll need actual labels for your validation images to use them here
@@ -161,6 +164,7 @@ def train_tennis_autoencoder(config, data_dir=None):
     # Display the confusion matrix
     disp.plot(cmap=plt.cm.Blues)
     plt.title('Confusion Matrix')
+    plt.savefig("./autoencoder/conf_matrix.png", bbox_inches='tight')
     plt.show()
 
 
@@ -198,20 +202,19 @@ def display_digit(ds, idx, save=False):
 
     plt.imshow(pixels, cmap=plt.get_cmap('gray_r'))
     if save == True:
-        plt.savefig(".\\idx_" + str(idx) + "_digit_" + str(label) + ".jpg", bbox_inches='tight')
+        plt.savefig("./idx_" + str(idx) + "_digit_" + str(label) + ".jpg", bbox_inches='tight')
     plt.show()
     plt.close()
 
 
 def main():
     data_dir = os.path.abspath("../video/frames")
-    # load_data_autoencoder(data_dir)
 
     config = {
-        "lr": 0.003,
+        "lr": 0.001,
         "weight_decay": 0.0001,
-        "batch_size": 32,
-        "epochs": 25
+        "batch_size": 16,
+        "epochs": 35
     }
 
     train_tennis_autoencoder(config, data_dir)
