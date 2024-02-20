@@ -141,7 +141,7 @@ def train_tennis_autoencoder(config, data_dir=None):
     plt.show()
 
     lower_threshold = 0.1
-    upper_threshold = 1.1
+    upper_threshold = 0.9
     plt.figure(figsize=(12, 6))
     plt.title('Loss Distribution by Label')
     sns.displot(data=loss_labels_df, x='loss', hue='label', kde=True, fill=True, palette="tab10")
