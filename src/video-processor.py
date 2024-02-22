@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from pytorch2tikz import Architecture
 
+from src.auto_encoder import ConvAutoencoder
 from src.cnn import TennisCNN
 
 transform = transforms.Compose([
@@ -17,16 +18,37 @@ transform = transforms.Compose([
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Using {device} device")
 
-model = TennisCNN(512, 256).to(device)
-model_state, optimizer_state = torch.load('model.pth', map_location=device)
-model.load_state_dict(model_state)
-model = model.to(device)
-model.eval()
-print("Model loaded.")
+model_type = "autoencoder"  # Replace with "cnn" or "autoencoder"
+
+
+def load_cnn(device=device, model_path='model.pth'):
+    model = TennisCNN(512, 256).to(device)
+    model_state, optimizer_state = torch.load(model_path, map_location=device)
+    model.load_state_dict(model_state)
+    model = model.to(device)
+    model.eval()
+    print("Model loaded.")
+    return model
+
+
+def load_ae(device=device, model_path='autoencoder.pth'):
+    model = ConvAutoencoder().to(device)
+    model_state = torch.load(model_path, map_location=device)
+    model.load_state_dict(model_state)
+    model = model.to(device)
+    model.eval()
+    print("Model loaded.")
+    return model
+
+
+if model_type == "autoencoder":
+    model = load_ae()
+else:
+    model = load_cnn()
 
 video_path = 'test.mp4'
-output_video_path = 'out.mp4'
-output_video_with_overlay_path = 'out_overlay.mp4'
+output_video_path = f'out_{model_type}.mp4'
+output_video_with_overlay_path = f'out_{model_type}_overlay.mp4'
 
 cap = cv2.VideoCapture(video_path)
 if not cap.isOpened():
@@ -52,6 +74,7 @@ pip_position = (20, 20)
 
 show_pip = True
 show_timecode = True
+
 
 # arch = Architecture(model)
 
@@ -80,9 +103,24 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
 
         # Make a prediction
         outputs = model(frame_processed)
-        _, predicted = torch.max(outputs, 1)
 
-        if predicted.item() == target_class_index:
+        def predict_cnn(outputs):
+            _, predicted = torch.max(outputs, 1)
+            return predicted.item() == target_class_index
+
+        def predict_ae(outputs):
+            upper_threshold = 1.1
+            criterion = torch.nn.MSELoss()
+            loss = criterion(frame_processed, outputs)
+            return True if loss <= upper_threshold else False
+
+        def predict(outputs):
+            if model_type == "autoencoder":
+                return predict_ae(outputs)
+            else:
+                return predict_cnn(outputs)
+
+        if predict(outputs):
             out.write(frame)
             out_frame_with_overlay = frame
             saved_frame_count += 1
