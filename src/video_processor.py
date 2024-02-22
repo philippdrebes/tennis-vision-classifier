@@ -75,6 +75,8 @@ show_pip = True
 show_timecode = True
 
 criterion = torch.nn.MSELoss()
+
+
 # arch = Architecture(model)
 
 
@@ -103,20 +105,24 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
         # Make a prediction
         outputs = model(frame_processed)
 
+
         def predict_cnn(outputs):
             _, predicted = torch.max(outputs, 1)
             return predicted.item() == target_class_index
+
 
         def predict_ae(outputs):
             upper_threshold = 0.8
             loss = criterion(frame_processed, outputs)
             return True if loss <= upper_threshold else False
 
+
         def predict(outputs):
             if model_type == "autoencoder":
                 return predict_ae(outputs)
             else:
                 return predict_cnn(outputs)
+
 
         if predict(outputs):
             out.write(frame)
