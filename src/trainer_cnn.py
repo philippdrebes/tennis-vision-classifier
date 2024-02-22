@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import ray
@@ -14,7 +14,7 @@ from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 import tempfile
 
-from src.cnn import TennisCNN
+from src.models.cnn import TennisCNN
 
 
 def load_data(data_dir="../video/frames"):

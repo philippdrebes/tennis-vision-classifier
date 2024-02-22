@@ -3,10 +3,9 @@ import torch
 from torchvision import transforms
 from tqdm import tqdm
 import numpy as np
-from pytorch2tikz import Architecture
 
-from src.auto_encoder import ConvAutoencoder
-from src.cnn import TennisCNN
+from src.models.auto_encoder import ConvAutoencoder
+from src.models.cnn import TennisCNN
 
 transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -75,7 +74,7 @@ pip_position = (20, 20)
 show_pip = True
 show_timecode = True
 
-
+criterion = torch.nn.MSELoss()
 # arch = Architecture(model)
 
 
@@ -109,8 +108,7 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
             return predicted.item() == target_class_index
 
         def predict_ae(outputs):
-            upper_threshold = 1.1
-            criterion = torch.nn.MSELoss()
+            upper_threshold = 0.8
             loss = criterion(frame_processed, outputs)
             return True if loss <= upper_threshold else False
 

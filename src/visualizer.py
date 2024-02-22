@@ -4,7 +4,7 @@ import torch
 from torchvision import transforms
 import imageio.v3 as iio
 
-from src.cnn import TennisCNN
+from src.models.cnn import TennisCNN
 
 transform = transforms.Compose([
     transforms.ToPILImage(),

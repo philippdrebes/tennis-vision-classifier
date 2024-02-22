@@ -13,7 +13,7 @@ from collections import defaultdict
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-from src.auto_encoder import ConvAutoencoder
+from src.models.auto_encoder import ConvAutoencoder
 
 
 def load_data_autoencoder(data_dir="../video/frames"):
