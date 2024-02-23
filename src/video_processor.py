@@ -112,7 +112,7 @@ with torch.no_grad(), tqdm(total=total_frames, desc="Processing Video") as pbar:
 
 
         def predict_ae(outputs):
-            upper_threshold = 0.8
+            upper_threshold = 0.6
             loss = criterion(frame_processed, outputs)
             return True if loss <= upper_threshold else False
 

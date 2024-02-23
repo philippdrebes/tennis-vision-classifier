@@ -11,3 +11,5 @@ scikit-learn
 pytorch2tikz
 imageio
 seaborn
+shap
+Pillow
