@@ -19,7 +19,8 @@ import random
 import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(module)s.%(funcName)s:%(lineno)d] - %(message)s' )
-dir_src = Path('/mnt/c/Users/8377/switchdrive/SyncVM/w HSLU S3/BS S3 Computer Vision/tennis-vision-classifier/src')
+# dir_src = Path('/mnt/c/Users/8377/switchdrive/SyncVM/w HSLU S3/BS S3 Computer Vision/tennis-vision-classifier/src')
+dir_src = Path(__file__).parent
 dir_data = dir_src.parent / 'data'
 (dir_data / 'debugging_images').mkdir(parents=True, exist_ok=True)
 
@@ -359,6 +360,6 @@ def RUN_setup_confusion_dash():
 # TEST_json_fix_extract_response_too_few_max_tokens()
 # TEST_payload_non_vision_api_interaction()
 # TEST_payload_vision_api_interaction()
-# RUN_classify_gpt4_threaded(9)
-RUN_combine_classifications()
-RUN_setup_confusion_dash()
+# RUN_classify_gpt4_threaded(1)
+# RUN_combine_classifications()
+# RUN_setup_confusion_dash()

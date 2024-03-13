@@ -59,6 +59,21 @@
         "F1 Score": 0.325,
         "Matthews Correlation Coefficient": 0.069
     },
+    "classification_gpt4v_4x4": {
+        "True Positive": 148,
+        "False Positive": 18,
+        "False Negative": 32,
+        "True Negative": 162,
+        "True Positive %": 0.411,
+        "False Positive %": 0.05,
+        "False Negative %": 0.089,
+        "True Negative %": 0.45,
+        "Accuracy": 0.861,
+        "Precision": 0.892,
+        "Recall": 0.822,
+        "F1 Score": 0.855,
+        "Matthews Correlation Coefficient": 0.724
+    },
     "classification_gpt4v_9x9": {
         "True Positive": 154,
         "False Positive": 23,

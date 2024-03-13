@@ -402,7 +402,7 @@ class OpenAIAPIResponse:
             self.response_extracted = str(e)
 
 
-    @retry(wait=wait_exponential(min=1, max=30), stop=stop_after_attempt(2), retry=retry_if_exception_type(requests.exceptions.HTTPError), before=before_log(logging.getLogger(__name__), logging.DEBUG))
+    @retry(wait=wait_exponential(min=5, max=30), stop=stop_after_attempt(2), retry=retry_if_exception_type(requests.exceptions.HTTPError), before=before_log(logging.getLogger(__name__), logging.DEBUG))
     def handle_openai_request(self):
         time_start = time.time()
         try:
@@ -484,7 +484,7 @@ def classify_gpt4v_threaded(batch_size:int, read_in_head_limit, images_index_inp
                 classification_image_list=[multi_img_instance.image_combined],
                 max_tokens = 400   # Increase the token limit in case the problem was truncation
                     )
-        logging.info(f'payload_classify:\n{payload_classify.payload}')
+        # logging.info(f'payload_classify:\n{payload_classify.payload}')
         response_handler = OpenAIAPIResponse(payload=payload_classify.payload)
         response_handler.handle_openai_request()
         classification_dict = response_handler.response_extracted
