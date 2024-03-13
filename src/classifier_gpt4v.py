@@ -2,169 +2,18 @@
 
 # gpt4v  list of image uri's goes in, classifications go out, classifications are cached
 
-
-
-
-# from import
-
-# os.chdir('/mnt/c/Users/8377/switchdrive/SyncVM/w HSLU S3/BS S3 Computer Vision/playing_waiting_classifier_images')
-# playing_dir_0 = './data_PCA/playing_waiting_frames_sorted_playing=0'
-# playing_dir_1 = './data_PCA/playing_waiting_frames_sorted_playing=1'
-# playing_dir_1_test = f'{playing_dir_1}_test'
-
-# width = 80    # performs better than 320 or 160
-# height = 45   # performs better than 180 or  90
-
-# pca_model_path = f'./model_pca/pca_model_{width}x{height}.joblib'
-# playing_images = load_and_process_images(playing_dir_1, width, height, f'{playing_dir_1}_test')
-# pca_and_visualize(playing_images, width, height, pca_model_path)
-
-### new_image_path = playing_dir_0 + '/Emma Raducanu vs Leylah Fernandez Full Match ｜ 2021 US Open Final [F99Kz2eptqM]_00-03-0.jpg'   # playing=0
-### new_image_path = playing_dir_1 + '/Emma Raducanu vs Leylah Fernandez Full Match ｜ 2021 US Open Final [F99Kz2eptqM]_00-06-0.jpg'   # playing=1
-##### plot_images_and_calculate_similarity_individual(new_image_path, pca_model_path, width, height)
-##
-##
-
-
-
-
-# import re
-# import base64
-# import json
-# import requests
-# import functools
-# from concurrent.futures import ThreadPoolExecutor, as_completed
-# import functools
-
-
-# from concurrent.futures import ThreadPoolExecutor
-# import functools, re
-# def threaded_openai_call(max_workers=10):
-#     def decorator_openai_call(func):
-#         @functools.wraps(func)
-#         def wrapper(*args, **kwargs):
-#             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-#                 future = executor.submit(func, *args, **kwargs)
-#                 return future.result()
-#         return wrapper
-#     return decorator_openai_call
-
-
-
-# import re
-# import base64
-# import json
-# import requests
-# import functools
-# from concurrent.futures import ThreadPoolExecutor, as_completed
-# import functools
-
-
-# @threaded_openai_call(max_workers=10)
-# @profiler_mem_time_detailed
-# def call_openai_api_vision(row, image_512_path, base64_image):
-#     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY_OPENAI}"}
-#     payload = {
-#         "model": "gpt-4-vision-preview",
-#         "messages": [
-#             {"role": "user", "content": [
-#         # "text": f"Pytesseract: {row['slide_transcript_pytesseract']}" },
-#             {"type": "text", "text": f"Here is a first-shot attempt at transcribing the text, build on this: {row['slide_transcript_easyocr']}. Now transcribe the contents of this image in a structured .json format keeping seperate paragraphs distinct. If there are any non-text visual elements (icons, graphs) describe them. Be terse give no comments on font or colors, only transcribe text & visual elements. Keep all comments inside the .json . Begin and end with curly braces just like a raw .json  "},
-#             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}", "detail": "low"}}
-#         ]} ], "max_tokens": 400
-#         }
-#     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-#     if response.status_code == 200:
-#         response_json = response.json()
-#         content = response_json['choices'][0]['message']['content']
-#         json_content = re.search(r'{.*}', content, re.DOTALL)
-#         json_str = json_content.group(0) if json_content else '{}'
-#         token_usage = response_json['usage']
-#         slide_number_this_slide = image_512_path.split('/')[1].split('_')[1]
-#         return {'filepath': image_512_path, 'pitchdeck_title': image_512_path.split('/')[1].split('_')[0], 'slide_number_this_slide': slide_number_this_slide, 'prompt_tokens': token_usage['prompt_tokens'], 'completion_tokens': token_usage['completion_tokens'], 'total_tokens': token_usage['total_tokens'], 'slide_transcript_easyocr': row['slide_transcript_easyocr'], 'gpt4v_transcription': json_str}
-#     else:
-#         return {"error": response.text, "image": image_512_path}
-
-
-# @profiler_mem_time_detailed
-# def process_images_and_call_api(df):
-#     def encode_image_to_base64(image_path):
-#         with open(image_path, "rb") as image_file:
-#             return base64.b64encode(image_file.read()).decode('utf-8')
-
-#     responses = []
-#     df_original = df.loc[df['slide_subimage_type'] == 'original']
-#     df_original = df_original   # .head(6)
-
-#     with ThreadPoolExecutor(max_workers=10) as executor:   # try out multiple requests
-#         future_to_response = {executor.submit(call_openai_api_vision, row, row['relative_filepath'].replace('original', '512'), encode_image_to_base64(f"./C_data_processed/{row['relative_filepath'].replace('original', '512')}")): row for index, row in df_original.iterrows()}
-
-#     for future in as_completed(future_to_response):
-#         row = future_to_response[future]
-#         try:
-#             response = future.result()
-#         except Exception as exc:
-#             print(f"{row['relative_filepath']} generated an exception: {exc}")
-#         else:
-#             responses.append(response)
-#     return responses
-
-
-# def validate_and_fix_json(df):
-#     def is_valid_json(json_str):
-#         try:
-#             json.loads(json_str)
-#             return True, None
-#         except json.JSONDecodeError as e:
-#             return False, str(e)
-
-#     @profiler_mem_time_detailed
-#     def fix_json_with_gpt(content, error_message):
-#         headers = {"Authorization": f"Bearer {API_KEY_OPENAI}"}
-#         payload = {
-#             "model": "gpt-3.5-turbo-1106",
-#             "response_format": { "type": "json_object" },
-#             "messages": [
-#                 {"role": "system", "content": "Fix the errors and return the same content in valid JSON syntax."},
-#                 {"role": "user", "content": f"Error: {error_message}\nContent: {content}"}
-#             ]
-#         }
-#         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-#         if response.status_code == 200:
-#             response_json = response.json()
-#             return response_json['choices'][0]['message']['content']
-#         else:
-#             return "GPT failed to fix JSON: " + response.text
-
-#     if 'gpt4v_transcription_validated' not in df.columns:
-#         df['gpt4v_transcription_validated'] = df['gpt4v_transcription']
-
-#     # Convert non-string values to strings
-#     df['gpt4v_transcription_validated'] = df['gpt4v_transcription_validated'].apply(lambda x: str(x) if not isinstance(x, str) else x)
-
-#     for index, row in df.iterrows():
-#         is_valid, error_msg = is_valid_json(row['gpt4v_transcription_validated'])
-#         if not is_valid:
-#             fixed_json = fix_json_with_gpt(row['gpt4v_transcription_validated'], error_msg)
-#             df.at[index, 'gpt4v_transcription_validated'] = fixed_json
-
-
-
-
-
-
-
+# design idea: checkpoints are saved after each stage, all outputs return their contents so that the functions can be piped.
+# Goal: Use 'Command' Design pattern for the queue – it should contain objects who's methods will be executed, rather than just containing data which is passed to seperate executor code
 
 # https://superstudy.guide/algorithms-data-structures/data-structures/stacks-queues/#queues
-# Immutable checkpoints are saved after each stage, all outputs return their contents so that the functions can be piped.
+# gpt4v API documentation:   https://platform.openai.com/docs/guides/vision/uploading-base-64-encoded-images
 
-# https://platform.openai.com/docs/guides/vision/uploading-base-64-encoded-images
 
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import base64
 import json
 import math
@@ -174,12 +23,23 @@ import requests
 import time
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from queue import Queue
 from sklearn.metrics import confusion_matrix
 import itertools
+import logging
+from datetime import datetime
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type, before_log
+
+import sys
+sys.path.append('../scripts/')
+# from utility_code import profiler_mem_time_detailed    # for bottleneck profiling
 
 
 
+
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 dir_src = Path('/mnt/c/Users/8377/switchdrive/SyncVM/w HSLU S3/BS S3 Computer Vision/tennis-vision-classifier/src')
 dir_data = dir_src.parent / 'data'
 (dir_data / 'debugging_images').mkdir(parents=True, exist_ok=True)
@@ -187,7 +47,6 @@ dir_data = dir_src.parent / 'data'
 with open("/mnt/c/Users/8377/switchdrive/SyncVM/.env", 'r') as file:   # SECRETS FROM FILE
     env_vars = json.load(file)
     API_KEY_OPENAI   = env_vars["API_KEY_OPENAI"]
-
 
 
 
@@ -225,82 +84,10 @@ def create_image_index(dir_images):
 
 
 
-@dataclass
-class MultiImage:
-    # Takes in references to images, with their IDs, and composits them into a single labelled image
-    input_images_list: List[Tuple[int, str]]  # List of tuples (image_ID_index, image_relative_filepath)
-    grid_num_rows_cols: Tuple[int] = field(init=True, default=(1))
-    image_shurnk_size: Tuple[int] = field(init=True, default=(512))
-    image_combined: Image.Image = field(init=False)
-
-    def __post_init__(self):
-        self.grid_num_rows_cols = math.ceil(math.sqrt(len(self.input_images_list)))
-        self.image_shurnk_size = math.floor(512 / self.grid_num_rows_cols)
-        marked_images = [self.image_resize_crop_markup(index, image_filepath) for index, image_filepath in self.input_images_list]
-        self.image_combined = self.image_combiner(marked_images)
-
-
-    def image_resize_crop_markup(self, index, image_filepath):
-        font_size = 25
-        img = Image.open(image_filepath)
-
-        # Resizes with constant aspect ratio to height 512
-        aspect_ratio = img.width / img.height
-        new_width = int(aspect_ratio * 512)
-        img = img.resize((new_width, 512), Image.LANCZOS)
-
-        # Center crop to 512x512
-        if new_width > 512:
-            left = (new_width - 512) / 2
-            upper = 0
-            right = (new_width + 512) / 2
-            lower = 512
-            img = img.crop((left, upper, right, lower))
-
-        # Resizes again to fit into a minimal square bounding box
-        new_size = self.image_shurnk_size
-        img = img.resize((new_size, new_size), Image.LANCZOS)
-
-        # Draws a single pixel wide white line across the top and left borders
-        draw = ImageDraw.Draw(img)
-        draw.line([(0, 0), (new_size - 1, 0)], fill="white", width=1)  # Top border
-        draw.line([(0, 0), (0, new_size - 1)], fill="white", width=1)  # Left border
-
-        font = ImageFont.truetype("../scripts/ARIAL.ttf", font_size)
-
-        text_bbox = draw.textbbox((0, 0), str(index), font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-        img_width, img_height = img.size
-        position = ((img_width - text_width) / 2, (img_height - text_height) / 2)
-
-        # Draw border slightly offset from the original position
-        offset_range = [-2, 0, 2]
-        for x_offset in offset_range:
-            for y_offset in offset_range:
-                border_position = (position[0] + x_offset, position[1] + y_offset)
-                draw.text(border_position, str(index), font=font, fill="black")
-
-        # Draws the main text in text_colour
-        draw.text(position, str(index), font=font, fill="white")
-        return img
-
-    def image_combiner(self, marked_images):
-        grid_size = self.grid_num_rows_cols
-        new_size = self.image_shurnk_size
-        canvas = Image.new('RGB', (512, 512), "black")
-        for i, img in enumerate(marked_images):
-            x = (i % grid_size) * new_size
-            y = (i // grid_size) * new_size
-            canvas.paste(img, (x, y))
-        return canvas
-
-
-
 
 def classify_gpt4v(image):
     # Input: a composite PIL image of frames with index numbers stamped
-    # Returns: a JSON of classifications of each frame e.g. {"201": 0, "30": 1, "185": 0, "163": 0, "59": 1, "98": 1, "77": 0, "29": 1, "121": 0, "time_taken": 7.13, "initial_response_was_valid_json": 1, "total_input_tokens": 212, "total_output_tokens": 69}
+    # Returns: a JSON of classifications of each frame e.g. {"201": 0, "30": 1, "185": 0, "163": 0, "59": 1, "98": 1, "77": 0, "29": 1, "121": 0, "time_taken": 7.13, "response_state": 1, "cost_tokens_input": 212, "cost_tokens_output": 69}
 
     def encode_image_to_base64(image):
         buffered = BytesIO()
@@ -320,9 +107,34 @@ def classify_gpt4v(image):
             "temperature": 0,
             "max_tokens": 400
         }
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-        print(response.json())
-        return response
+
+        max_cycles = 3
+        attempts_per_cycle = 6  # progression 2, 4, 8, 16, 32, 60
+        total_attempts = max_cycles * attempts_per_cycle
+        current_attempt = 0
+
+        while current_attempt < total_attempts:
+            try:
+                response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+                logging.info(response.json())
+                response.raise_for_status()
+                return response
+            except requests.exceptions.HTTPError as e:
+                if response.status_code == 429:
+                    cycle_position = (current_attempt % attempts_per_cycle) + 1
+                    wait = min(2 ** cycle_position, 60)
+                    logging.warning(f"{response.json()} Waiting {wait} seconds before retrying...")
+                    time.sleep(wait)
+                else:
+                    logging.error(f"HTTP error occurred: {e} - {response.json()}")
+                    return {"error": f"HTTP error occurred: {e}", "response": response.json()}
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Request error occurred: {e}")
+                return {"error": f"Request error occurred: {e}"}
+
+            current_attempt += 1
+
+        return {"error": "Request failed after retries or encountered a non-retryable error."}
 
     def is_valid_json(json_str):
         try:
@@ -334,7 +146,7 @@ def classify_gpt4v(image):
     def fix_json_with_gpt(content, error_message):
         headers = {"Authorization": f"Bearer {API_KEY_OPENAI}"}
         payload = {
-            "model": "gpt-3.5-turbo-1106",
+            "model": "gpt-3.5-turbo",
             "response_format": "json",
             "messages": [
                 {"role": "system", "content": "Fix the errors and return the same content in valid JSON syntax."},
@@ -342,19 +154,21 @@ def classify_gpt4v(image):
             ]
         }
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        logging.info(f"fix_json_with_gpt:\n{response.text}")
         if response.status_code == 200:
             return response.json()['choices'][0]['message']['content']
         else:
             return "GPT failed to fix JSON: " + response.text
 
 
-    start_time = time.time()
+    time_start = time.time()
     base64_image = encode_image_to_base64(image)
     response = call_openai_api_vision(base64_image)
 
-    initial_response_was_valid_json = 1
-    total_input_tokens = total_output_tokens = 0
+    response_state = 1
+    cost_tokens_input = cost_tokens_output = 0
 
+    logging.info(response)
     if response.status_code == 200:
         response_json = response.json()
         content = response_json['choices'][0]['message']['content']
@@ -362,154 +176,475 @@ def classify_gpt4v(image):
 
         is_valid, error_msg = is_valid_json(json_str)
         if not is_valid:
-            initial_response_was_valid_json = 0
+            response_state = 0
             json_str = fix_json_with_gpt(json_str, error_msg)
 
         token_usage = response_json['usage']
-        total_input_tokens += token_usage['prompt_tokens']
-        total_output_tokens += token_usage['completion_tokens']
+        cost_tokens_input += token_usage['prompt_tokens']
+        cost_tokens_output += token_usage['completion_tokens']
 
         # If the initial JSON was invalid and fixed, we need to account for the token usage of the fix attempt
-        if not initial_response_was_valid_json:
+        if not response_state:
             fix_response = call_openai_api_vision(base64_image, "Please fix this JSON.")
             if fix_response.status_code == 200:
                 fix_token_usage = fix_response.json()['usage']
-                total_input_tokens += fix_token_usage['prompt_tokens']
-                total_output_tokens += fix_token_usage['completion_tokens']
+                cost_tokens_input += fix_token_usage['prompt_tokens']
+                cost_tokens_output += fix_token_usage['completion_tokens']
 
-        elapsed_time = time.time() - start_time
-        result_object = json.loads(json_str)
-        result_object.update({
+        elapsed_time = time.time() - time_start
+        response_extracted = json.loads(json_str)
+        response_extracted.update({
             "time_taken": np.round(elapsed_time,2),
-            "initial_response_was_valid_json": initial_response_was_valid_json,
-            "total_input_tokens": total_input_tokens,
-            "total_output_tokens": total_output_tokens
+            "response_state": response_state,
+            "cost_tokens_input": cost_tokens_input,
+            "cost_tokens_output": cost_tokens_output
         })
-        return result_object
+        return response_extracted
     else:
         return {"error": response.text}
 
 
 
+@dataclass
+class MultiImage:
+    # Takes in references to images, with their IDs, and composits them into a single labelled image
+    input_images_list:  List[Tuple[int, str]]  # List of tuples [(image_ID_index, image_relative_filepath)]
+    image_size_default:     int = field(init=True, default=512)
+    image_size_shrunk:      int = field(init=True, default=512)
+    grid_num_rows_cols:     int = field(init=True, default=1)
+    font_size:              int = field(init=True, default=25)
+    font_path:              str = field(init=True, default='../scripts/ARIAL.ttf')
+    image_combined: Image.Image = field(init=False)
 
-# def chunk_dataframe(df, batch_size):
-#     for i in range(0, df.shape[0], batch_size):
-#         yield df.iloc[i:i + batch_size]
+    def __post_init__(self):
+        self.grid_num_rows_cols = math.ceil(math.sqrt(len(self.input_images_list)))
+        self.image_size_shrunk = math.floor(self.image_size_default / self.grid_num_rows_cols)
+        marked_images = [self.image_resize_crop_markup(index, image_filepath) for index, image_filepath in self.input_images_list]
+        self.image_combined = self.image_combiner(marked_images)
 
-# def process_batch(batch):
-#     results = []
-#     for image_batch in batch:
-#         # Create a list of tuples (image_ID_index, image_relative_filepath)
-#         input_images_list = [(index, filepath) for index, filepath in image_batch]
+    def image_resize_crop_markup(self, index, image_filepath):
+        img = Image.open(image_filepath)
 
-#         # Instantiate the MultiImage class and combine the images
-#         multi_img_instance = MultiImage(input_images_list)
+        # Resizes with constant aspect ratio to height 512
+        aspect_ratio = img.width / img.height
+        new_width = int(aspect_ratio * self.image_size_default)
+        img = img.resize((new_width, self.image_size_default), Image.LANCZOS)
 
-#         # Classify the combined image and store the result
-#         classification_json = classify_gpt4v(multi_img_instance.image_combined)
-#         results.append(classification_json)
+        # Center crop to 512x512
+        if new_width > self.image_size_default:
+            left = (new_width - self.image_size_default) / 2
+            upper = 0
+            right = (new_width + self.image_size_default) / 2
+            lower = self.image_size_default
+            img = img.crop((left, upper, right, lower))
 
-#         # Optionally, save the combined image for debugging
-#         combined_image_path = dir_data / "debugging_images" / f"combined_image_{input_images_list[0][0]}.jpg"
-#         multi_img_instance.image_combined.save(combined_image_path, "JPEG")
+        # Resizes again to fit into a minimal square bounding box
+        new_size = self.image_size_shrunk
+        img = img.resize((new_size, new_size), Image.LANCZOS)
 
-#     return results
+        # Draws a single pixel wide white line across the top and left borders
+        draw = ImageDraw.Draw(img)
+        draw.line([(0, 0), (new_size - 1, 0)], fill="white", width=1)  # Top border
+        draw.line([(0, 0), (0, new_size - 1)], fill="white", width=1)  # Left border
+        font = ImageFont.truetype(self.font_path, self.font_size)
+        text_bbox = draw.textbbox((0, 0), str(index), font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+        img_width, img_height = img.size
+        position = ((img_width - text_width) / 2, (img_height - text_height) / 2)
 
-# def update_dataframe_with_classifications(df, classifications):
-#     # Flatten the list of classification results
-#     flat_classifications = [item for sublist in classifications for item in sublist]
-#     classification_df = pd.DataFrame(flat_classifications)
-#     updated_df = df.merge(classification_df, left_on='image_ID_index', right_on='index', how='left')
+        # Draws text with slightly offset black border
+        offset_range = [-2, 0, 2]
+        for x_offset in offset_range:
+            for y_offset in offset_range:
+                border_position = (position[0] + x_offset, position[1] + y_offset)
+                draw.text(border_position, str(index), font=font, fill="black")
+        draw.text(position, str(index), font=font, fill="white")
+        return img
 
-#     return updated_df
+    def image_combiner(self, marked_images):
+        grid_size = self.grid_num_rows_cols
+        new_size = self.image_size_shrunk
+        canvas = Image.new('RGB', (self.image_size_default, self.image_size_default), "black")
+        for i, img in enumerate(marked_images):
+            x = (i % grid_size) * new_size
+            y = (i // grid_size) * new_size
+            canvas.paste(img, (x, y))
+        return canvas
 
 
 
 
 
-# def threaded_runner(df, batch_size):
-#     # Queue for thread-safe result collection
-#     result_queue = Queue()
+@dataclass
+class OpenAIAPIPayload:
+    # INPUT
+    classification_system_message: str
+    classification_user_text: str
+    classification_image_list: Optional[list] = None
+    max_tokens:  int   = 200
+    # TEMP VARS
+    model:       str   = field(init=False)
+    response_format: Optional[dict] = None   # {"type": "json_object"}  or   {"type": "text"}   see https://platform.openai.com/docs/api-reference/chat/create
+    temperature: float = 0.0
+    messages:    list  = field(init=False)
+    # OUTPUT
+    payload:     dict  = field(init=False)
 
-#     # Executor for running threads
-#     with ThreadPoolExecutor(max_workers=10) as executor:
-#         # Submits batches to the executor
-#         futures = [executor.submit(process_batch, batch) for batch in chunk_dataframe(df, batch_size)]
+    def __post_init__(self):
+        self.run()
 
-#         # Collects results as they complete
-#         for future in as_completed(futures):
-#             result_queue.put(future.result())
+    @staticmethod
+    def encode_image_to_base64(image):
+        # Assumes input of a PIL  image.open('image_filepath.jpg') object  , created by MultiImage class
+        buffered = BytesIO()
+        image.save(buffered, format="JPEG")
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-#     # Collect all results from the queue
-#     all_classifications = list(itertools.chain(*list(result_queue.queue)))
+    def create_messages_vision(self):
+        self.model = "gpt-4-vision-preview"
+        self.messages = [
+            {"role": "user", "content": [
+                {"type": "text", "text": self.classification_system_message}] +
+                [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{OpenAIAPIPayload.encode_image_to_base64(multi_image)}"}} for multi_image in self.classification_image_list]
+                        }]
 
-#     # Update the original DataFrame with classifications
-#     updated_df = update_dataframe_with_classifications(df, all_classifications)
+    def create_messages_chat(self):
+        self.model = "gpt-3.5-turbo"
+        self.response_format = {"type": "json_object"}
+        self.messages = [
+            {"role": "system", "content": self.classification_system_message},
+            {"role": "user", "content": self.classification_user_text}
+                        ]
 
-#     return updated_df
+    def run(self):
+        isVision = bool(self.classification_image_list)   # If the image list is empty, assumes it is a text query and non_vision
+        if isVision:
+            self.create_messages_vision()
+        else:
+            self.create_messages_chat()
 
-# # Example usage:
-# df = pd.read_csv(dir_data / "index_image_filepaths.csv", index_col=False).sample(27)
+        self.payload = {
+            "model": self.model,
+            "temperature": self.temperature,
+            "messages": self.messages,
+            "max_tokens": self.max_tokens
+        }
+        if self.response_format:
+            self.payload["response_format"] = self.response_format
+
+
+
+@dataclass
+class OpenAIAPIResponse:
+    # INPUT
+    payload: dict
+    # TEMP VARS
+    headers: dict = field(default_factory=lambda: {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY_OPENAI}"})
+    response_state: str = 'not_sent'
+    time_taken: float = 0
+    cost_tokens_input:  int = 0
+    cost_tokens_output: int = 0
+    cost_total_dollars: float = 0
+    # OUTPUT
+    response: Optional[dict] = field(init=False)
+    response_extracted: Optional[dict] = field(init=False)
+
+    def json_fix_extract_response(self, content):
+        try:     # Check if the response content is valid JSON and return extracted response, if not then re-send in another loop to fix it,
+            json.loads(content)   # Checks if content contains valid json, should throw JSONDecodeError if not
+            json_str = re.search(r'{.*}', content, re.DOTALL).group(0)
+
+            if self.response_state == 'fixing':
+                self.response_state = 'fixed'
+            else:
+                self.response_state = 'received_no_errors'
+            response_extracted = json.loads(json_str)
+            response_extracted.update({
+                "time_taken": self.time_taken,
+                "response_state": self.response_state,
+                "cost_tokens_input": self.cost_tokens_input,
+                "cost_tokens_output": self.cost_tokens_output,
+                "cost_total_dollars": self.cost_total_dollars })
+
+            self.response_extracted = response_extracted
+            logging.info(f'json_fix_extract_response response_extracted:\n{self.response_extracted}')
+
+        except json.JSONDecodeError as e:
+            logging.warning(f'JSON format error:\n{e}')
+            if self.response_state == 'fixing':   # If it already tried once, give up
+               self.response_extracted = {
+                "response_state": 'fixing_failed',
+                "error": "JSON couldn't be fixed despite trying, check character limit or format.",
+                "content": content }
+            else:   # Sends it for fixing using another request
+                self.response_state = 'fixing'
+                payload_fix_json = OpenAIAPIPayload(
+                classification_system_message='Fix any syntax errors and return the same content in valid JSON syntax with no newlines. If any fields are truncated or incomplete, drop them.',
+                classification_user_text=content,
+                classification_image_list=None,  # No images, non-vision request
+                max_tokens = int(self.payload['max_tokens'] * 2)   # Increase the token limit in case the problem was truncation
+                    )
+                logging.error(f'number of tokens in fixer payload: {payload_fix_json.max_tokens}')
+                response_fix_json = OpenAIAPIResponse(payload=payload_fix_json.payload)
+                response_fix_json.handle_openai_request()
+
+                if response_fix_json.response_state == 'received_no_errors':
+                    self.response_extracted = response_fix_json.response_extracted  #The fixing worked
+                else:   # The fixing didn't work
+                    self.response_extracted = {
+                        "response_state": 'fixing_failed',
+                        "error": "Attempted to fix JSON but failed, even after x2 the max_tokens.",
+                        "content": response_fix_json.response }
+
+        except Exception as e:
+            logging.warning(f'json_fix_extract_response unexpected error:\n{e}')
+            self.response_extracted = str(e)
+
+
+    @retry(wait=wait_exponential(min=1, max=30), stop=stop_after_attempt(2), retry=retry_if_exception_type(requests.exceptions.HTTPError), before=before_log(logging.getLogger(__name__), logging.DEBUG))
+    def handle_openai_request(self):
+        time_start = time.time()
+        try:
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=self.headers, json=self.payload)
+            response.raise_for_status()  # This will raise an HTTPError for bad responses
+
+            self.response = response.json()
+            self.time_taken += np.round(time.time() - time_start,2)
+            self.cost_tokens_input  += self.response.get('usage', {}).get('prompt_tokens', 0)
+            self.cost_tokens_output += self.response.get('usage', {}).get('completion_tokens', 0)
+            self.cost_total_dollars = np.round((30*(self.cost_tokens_input / 1000000)),4) + np.round((30*(self.cost_tokens_output / 1000000)),4)   # Assuming GPT4 prices:   https://openai.com/pricing
+
+            logging.info('handle_openai_request response Received')
+            response_json = response.json()
+            content = response_json['choices'][0]['message']['content']
+            self.json_fix_extract_response(content)   # This will handle any JSON syntax errors and always specify response_extracted
+            logging.info(f'handle_openai_request response_extracted:\n{self.response_extracted}')
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                logging.error("Rate limit exceeded.")
+                self.response_extracted = {
+                    "response_state": False,
+                    "error": f"Rate limit exceeded: HTTP error: {e.response.status_code} - {e.response.reason}",
+                    "content": e.response.text if e.response is not None else "No response text due to rate limiting." }
+            else:
+                logging.error(f"HTTP Error encountered: {e.response.status_code} - {e.response.reason}")
+                self.response_extracted = {
+                    "response_state": False,
+                    "error": f"HTTP error: {e.response.status_code} - {e.response.reason}",
+                    "content": e.response.text if e.response is not None else "No response text due to HTTP error." }
+
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {str(e)}")
+            self.response_extracted = {
+                "response_state": False,
+                "error": f"Unexpected error: {str(e)}",
+                "content": "An unexpected error prevented the request from completing." }
+
+
+
+# @profiler_mem_time_detailed
+def classify_gpt4v_threaded(batch_size:int, read_in_head_limit, images_index_input, images_index_output):
+    #Input: df_images_index_input index of image filepaths, and batch iteration size
+    #Output: df_images_output index containing the gpt4v classifications
+
+
+    def setup_input_output_indexes(read_in_head_limit, images_index_input, images_index_output):
+        df_images_index_input = pd.read_csv(images_index_input, index_col=False, nrows=read_in_head_limit)
+        if 'classification_gpt4v' not in df_images_index_input.columns:
+            df_images_index_input['classification_gpt4v'] = np.nan
+
+        if not images_index_output.exists():
+            logging.info(f"Output index   {images_index_output.name}   is missing, creating it.")
+            df_images_index_input = df_images_index_input[[col for col in df_images_index_input.columns if col != 'image_relative_filepath'] + ['image_relative_filepath']]
+            df_images_index_input.to_csv(images_index_output, index=False)
+            df_images_index = df_images_index_input.copy()
+        else:
+            df_images_index = pd.read_csv(images_index_output, index_col=False)
+        return df_images_index
+
+    def chunk_dataframe(df_images_index_todo, batch_size):
+        for i in range(0, df_images_index_todo.shape[0], batch_size):
+            yield df_images_index_todo.iloc[i:i + batch_size]
+
+    def process_batch(batch):
+        # Composits the combined image, sends it off for classifying, and stores the result
+        results = []
+        input_images_list = []
+        for _, row in batch.iterrows():
+            input_images_list.append((row['image_ID_index'], row['image_relative_filepath']))
+
+        multi_img_instance = MultiImage(input_images_list)
+        # classification_dict = classify_gpt4v(multi_img_instance.image_combined)   # Deprecated
+
+        payload_classify = OpenAIAPIPayload(
+                classification_system_message="Classify each sub-frame as PLAYING (with label 1) or NON-PLAYING (with label 0): PLAYING scenes only show the tennis court from the standard broadcast angle, fully visible and vertically & horizontally aligned with the court lines (the audience should at most be barely visible). NON-PLAYING scenes show any other content that is not a standard broadcast view of the court, including low-angle, court-side, zoom-in, or audience shots. Respond just in a JSON using the centered number (white text with black outline) in each square as the index for each frame.",
+                classification_user_text="Classify each sub-frame as PLAYING (with label 1) or NON-PLAYING (with label 0): PLAYING scenes only show the tennis court from the standard broadcast angle, fully visible and vertically & horizontally aligned with the court lines (the audience should at most be barely visible). NON-PLAYING scenes show any other content that is not a standard broadcast view of the court, including low-angle, court-side, zoom-in, or audience shots. Respond just in a JSON using the centered number (white text with black outline) in each square as the index for each frame.",
+                classification_image_list=[multi_img_instance.image_combined],
+                max_tokens = 400   # Increase the token limit in case the problem was truncation
+                    )
+        logging.info(f'payload_classify:\n{payload_classify.payload}')
+        response_handler = OpenAIAPIResponse(payload=payload_classify.payload)
+        response_handler.handle_openai_request()
+        classification_dict = response_handler.response_extracted
+        results.append(classification_dict)
+        logging.info(f'classification_dict:\n{classification_dict}')
+        combined_image_path = dir_data / "debugging_images" / f"combined_image_{input_images_list[0][0]}.jpg"   # Optional, for debugging
+        multi_img_instance.image_combined.save(combined_image_path, "JPEG")
+        return results
+
+    write_lock = Lock()
+
+    def thread_safe_update_concurrent_and_write_to_output(df_update, df_concurrent, output_file):
+        with write_lock:
+            df_concurrent = merge_df_using__image_ID_index_(df_concurrent, df_update)
+            df_concurrent['classification_gpt4v'] = df_concurrent['classification_gpt4v'].apply(
+                lambda x: '{:.0f}'.format(float(x)) if not pd.isnull(x) and isinstance(x, (float, int)) else x)
+            df_concurrent.to_csv(output_file, index=False)
+        return df_concurrent
+
+    def merge_df_using__image_ID_index_(df_base, df_update):
+        # logging.info(f'merge_df_using__image_ID_index_:\n{df_base}\n{df_update}')
+
+        df_update = df_update.drop_duplicates(subset=['image_ID_index'], keep='first')
+        df_update.set_index(['image_ID_index'], inplace=True)
+        df_base.set_index(['image_ID_index'], inplace=True)
+        df_base.update(df_update)
+        df_base.reset_index(inplace=True)
+        return df_base
+
+    def update_dataframe_with_classifications(df_images_index_todo, classifications):
+        classifications = [classification for classification in classifications if 'response_state' in classification]   # removes any dicts that are missing the 'response_state' field i.e. which means they're are failed runs
+        flattened_classification_results = {}
+        for classification in classifications:
+            for key, value in classification.items():
+                if key.isdigit():  # This selects imageIDs assuming they are always the only keys that are integers
+                    flattened_classification_results[int(key)] = value
+        logging.info(f'flattened_classification_results:\n{flattened_classification_results}')
+        df_classifications = pd.DataFrame(list(flattened_classification_results.items()), columns=['image_ID_index', 'classification_gpt4v'])
+        df_classifications['classification_gpt4v'] = df_classifications['classification_gpt4v'].astype(int)
+
+        logging.info(f'df_classifications:\n{df_classifications}')
+        merge_df_using__image_ID_index_(df_images_index_todo, df_classifications)
+        logging.info(f'df_images_index_processed:\n{df_images_index_todo}')
+
+        # df = df_images_index_todo.merge(df_classifications, on='image_ID_index', how='left')   # This was removed because it caused _x _y conflicts
+        return df_images_index_todo[[col for col in df_images_index_todo.columns if col != 'image_relative_filepath'] + ['image_relative_filepath']]
+
+    def run_logging_to_file(classifications_merged):
+        logging.info(f'classifications_merged:\n{classifications_merged}')
+        classifications_merged = [classification for classification in classifications_merged if 'response_state' in classification]   # removes any dicts that are missing the 'response_state' field i.e. that are failed runs
+        # run_cost_tokens_input = [sum([classification['cost_tokens_input'] for classification in classifications_merged])]
+        # run_cost_tokens_output = [sum([classification['cost_tokens_output'] for classification in classifications_merged])]
+        # run_response_states = [classification['response_state'] for classification in classifications_merged]
+        # run_estimated_total_price_dollars = [np.round((30*(run_cost_tokens_input[0] / 1000000)),2) + np.round((30*(run_cost_tokens_output[0] / 1000000)),2)]
+        run_logging = pd.DataFrame({
+            'timestamp': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            # 'run_cost_tokens_input': run_cost_tokens_input,
+            # 'run_cost_tokens_output': run_cost_tokens_output,
+            # 'run_response_states': run_response_states,   # TODO
+            # 'run_estimated_total_price_dollars': run_estimated_total_price_dollars,   # Assuming tokens only spent on gpt4 vision endpoint:   https://openai.com/pricing
+            })
+        logging.info(f'classifications_merged:\n{classifications_merged}')
+        if not (dir_data / "run_logging.csv").exists():
+            run_logging.to_csv(dir_data / "run_logging.csv", index=False)
+        else:
+            run_logging_csv = pd.read_csv(dir_data / "run_logging.csv", index_col=False)
+            run_logging_csv_merged = pd.concat([run_logging_csv, run_logging], ignore_index=True)
+            run_logging_csv_merged.to_csv(dir_data / "run_logging.csv", index=False)
+
+
+    df_images_index = setup_input_output_indexes(read_in_head_limit, images_index_input, images_index_output)
+    df_images_index_todo = df_images_index[df_images_index['classification_gpt4v'].isna()]   # Drops all finished lines
+    logging.info(f'Index of ALL images:\n{df_images_index}')
+    logging.info(f'Index of UNPROCESSED images:\n{df_images_index_todo}')
+    df_images_index_concurrent = df_images_index.copy()
+
+
+    result_queue = Queue()
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for batch in chunk_dataframe(df_images_index_todo, batch_size):
+            ids = batch['image_ID_index'].tolist()
+            logging.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Enqueueing batch of with image IDs: {' '.join(map(str, ids))}")
+            future = executor.submit(process_batch, batch)
+            futures.append(future)
+
+    # Simple Batched method
+        # for future in as_completed(futures):
+        #     result_queue.put(future.result())
+    # df_images_index_processed = update_dataframe_with_classifications(df_images_index_todo, classifications_merged)
+    # df_images_output = merge_df_using__image_ID_index_(df_images_index.copy(), df_images_index_processed)
+    # logging.info(f'df_images_output:\n{df_images_output}')
+    # df_images_output.to_csv(images_index_output, index=False)
+
+        for future in as_completed(futures):
+            df_images_index_processed  = update_dataframe_with_classifications(df_images_index_todo, future.result())
+            df_images_index_concurrent = thread_safe_update_concurrent_and_write_to_output(df_images_index_processed, df_images_index_concurrent, images_index_output)
+            result_queue.put(future.result())
+
+    df_images_output = df_images_index_concurrent
+
+    classifications_merged = list(itertools.chain(*list(result_queue.queue)))
+    run_logging_to_file(classifications_merged)
+
+    return df_images_output
+
+
+
+
+
+
+
+
+
+
+
+
+## Example usage code for classify_gpt4v_threaded(image) ###
+
 # batch_size = 9
-# updated_df = threaded_runner(df, batch_size)
-# print(updated_df)
+# read_in_head_limit = None   # set to None to read in all values
+# images_index_input  = dir_data / "index_image_filepaths.csv"
+# images_index_output = dir_data / "index_image_filepaths_classifications_gpt4v.csv"
+# updated_df = classify_gpt4v_threaded(batch_size, read_in_head_limit, images_index_input, images_index_output)
+
+
+
+
+
+
+
+### TODO ###
+# ☐ confusion dash
+# ☐ Test resizing the images to square without cropping
+# ☐ Test how small you can go, putting the image labels into the text
+# ☐ Test providing a 'guide' image for edge case comprehension
+# ☐ Test using 'Histograms' in image classification
+
+
+
+
+
 
 # # Compute and display the confusion matrix
 # y_true = df['true_label'].values  # Replace 'true_label' with the appropriate column name
-# y_pred = [classification['label'] for classification in all_classifications]  # Extract the label from your JSON object
+# y_pred = [classification['label'] for classification in classifications_merged]  # Extract the label from your JSON object
 # compute_and_display_confusion_matrix(y_true, y_pred)
 
 
 
 
-dir_images  = dir_src.parent / "video/frames/"
-image_index = create_image_index(dir_images)
-image_index.to_csv(dir_data / "index_image_filepaths.csv", index=False)
-
-# image_index_sample = pd.read_csv(dir_data / "index_image_filepaths.csv", index_col=False).head(9)   # Sample first 25
-image_index_sample = pd.read_csv(dir_data / "index_image_filepaths.csv", index_col=False).sample(4)   # Sample random 25
-print(image_index_sample)
-
-input_images_list = list(zip(image_index_sample['image_ID_index'], image_index_sample['image_relative_filepath']))
-multi_img_instance = MultiImage(input_images_list)
-multi_img_instance.image_resize_crop_markup(input_images_list[-1][0], input_images_list[-1][1]).save(dir_data / "debugging_images/test.jpg", "JPEG")
-multi_img_instance.image_combined.save(dir_data / "debugging_images/test_combined.jpg", "JPEG")
-
-classification_json = classify_gpt4v(multi_img_instance.image_combined)
-
-with open(dir_data / 'debugging_images/classification.json', 'w') as outfile:
-    json.dump(classification_json, outfile)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-### Stage 1: Image Loading ###
-### Producer 1: Reads paths from index_image_filepaths.csv, enqueues them into queue_image_filepaths.
-### Consumer 1: Takes image paths from queue_image_filepaths, performs resizing and any required pre-processing, and generates payloads (base64 encoding for GPT4).
-### outputs queue_image_filepaths = holds paths to images needing processing.
-
-### Stage 2: Image Batching ###
-### Producer 2: Groups payloads from queue_payloads into batches.
-### Consumer 2: Forms multi-image batches, stamps images with indexes, enqueues to queue_multiimage_batches.
-### outputs queue_multiimage_batches = holds image batches
-
-### Stage 3: API Querying ###
-### Producer 3: Takes prepared payloads from queue_multiimage_batches, schedules API calls using futures.
-### Consumer 3: Manages API calls, ensuring backpressure handling and error retry logic. Results (API responses) are placed in queue_result_jsons.
-### outputs queue_payloads = holds payloads prepared for API querying.
-
-### Stage 4: Result Processing ###
-### Producer 4: Monitors queue_result_jsons for completed futures, extracts JSON data from successful API responses.
-### Consumer 4: Takes JSON data, validates, and possibly enriches or transforms it. Finalized data is written to disk as immutable checkpoints.
-### outputs queue_result_jsons = holds futures/results from API querying.
+# Tips for using the OpenAI Vision API:
+    # OpenAI Vision API Reference:       Supports multiple images at once   https://platform.openai.com/docs/guides/vision/multiple-image-inputs
+    # Should we use the OpenAI package:  I prefer not to, and just send requests using import requests   because the OpenAI package is very frequently updated and often gives dependency conflict issues
+    # Rate Limit Requests Per Day: Batch miltiple images into a single request
+    # Rate Limit max_tokens:       It is calculate based on the max_tokens you request, not your actual usage, so keep your request as low as you can
+    # Rate Limit Countdown:        Check how far-off you are from getting rate
+    # Minimise Token Usage:        use  detail: low and 512x512 images where possible to minimise costs
+    # Utility as a 0-shot classifier:        Very fast & convenient. Means you can skip training your own model, or orchestrating your own GPU environment (train, or production)
+    # Reliability as a 0-shot classifier:    Varies, it depends, but is pretty good. Consider using it to pre-label your
