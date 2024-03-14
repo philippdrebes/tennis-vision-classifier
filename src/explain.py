@@ -23,11 +23,10 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # Normalize with ImageNet stats
 ])
 
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
 
-# mean = [0.485, 0.456, 0.406]
-# std = [0.229, 0.224, 0.225]
-#
-#
+
 def nhwc_to_nchw(x: torch.Tensor) -> torch.Tensor:
     if x.dim() == 4:
         x = x if x.shape[1] == 3 else x.permute(0, 3, 1, 2)
@@ -44,26 +43,26 @@ def nchw_to_nhwc(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
-#
-#
+
+
 # transform = [
 #     transforms.Lambda(nhwc_to_nchw),
 #     transforms.Lambda(lambda x: x * (1 / 255)),
 #     transforms.Normalize(mean=mean, std=std),
 #     transforms.Lambda(nchw_to_nhwc),
 # ]
-#
-# inv_transform = [
-#     transforms.Lambda(nhwc_to_nchw),
-#     transforms.Normalize(
-#         mean=(-1 * np.array(mean) / np.array(std)).tolist(),
-#         std=(1 / np.array(std)).tolist(),
-#     ),
-#     transforms.Lambda(nchw_to_nhwc),
-# ]
+
+inv_transform = [
+    transforms.Lambda(nhwc_to_nchw),
+    transforms.Normalize(
+        mean=(-1 * np.array(mean) / np.array(std)).tolist(),
+        std=(1 / np.array(std)).tolist(),
+    ),
+    transforms.Lambda(nchw_to_nhwc),
+]
 #
 # transform = transforms.Compose(transform)
-# inv_transform = transforms.Compose(inv_transform)
+inv_transform = transforms.Compose(inv_transform)
 
 # device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 # print(f"Using {device} device")
@@ -167,18 +166,18 @@ shap_values = explainer(
 )
 
 # rehspae the shap value array and test image array for visualization
-shap_numpy = [np.swapaxes(np.swapaxes(s, 1, -1), 1, 2) for s in shap_values]
-test_numpy = np.swapaxes(np.swapaxes(image_processed.numpy(), 1, -1), 1, 2)
+# shap_numpy = [np.swapaxes(np.swapaxes(s, 1, -1), 1, 2) for s in shap_values]
+# test_numpy = np.swapaxes(np.swapaxes(image_processed.numpy(), 1, -1), 1, 2)
 
 # plot the feature attributions
-shap.image_plot(shap_numpy, -test_numpy)
+# shap.image_plot(shap_values, -test_numpy)
 
-# shap_values.data = inv_transform(shap_values.data).cpu().numpy()
-# shap_values.values = [val for val in np.moveaxis(shap_values.values, -1, 0)]
-#
-# shap.image_plot(
-#     shap_values=shap_values.values,
-#     pixel_values=shap_values.data,
-#     labels=shap_values.output_names,
-#     true_labels=[class_names[0]],
-# )
+shap_values.data = inv_transform(shap_values.data).cpu().numpy()
+shap_values.values = [val for val in np.moveaxis(shap_values.values, -1, 0)]
+
+shap.image_plot(
+    shap_values=shap_values.values,
+    pixel_values=shap_values.data,
+    labels=shap_values.output_names,
+    true_labels=[class_names[0]],
+)

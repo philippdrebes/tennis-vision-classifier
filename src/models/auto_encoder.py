@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torchinfo import summary
 
 
 class ConvAutoencoder(nn.Module):
@@ -63,7 +64,11 @@ class ConvAutoencoder(nn.Module):
         return x
 
 
-# net = ConvAutoencoder()
-# dummy_input = torch.randn(1, 3, 224, 224)  # Batch size of 1
-# output = net(dummy_input)
-# print(output.size())  # Should be torch.Size([1, 3, 224, 224])
+if __name__ == '__main__':
+    # net = ConvAutoencoder()
+    # dummy_input = torch.randn(1, 3, 224, 224)  # Batch size of 1
+    # output = net(dummy_input)
+    # print(output.size())  # Should be torch.Size([1, 3, 224, 224])
+    model = ConvAutoencoder()
+    batch_size = 16
+    summary(model, input_size=(batch_size, 3, 224, 224))

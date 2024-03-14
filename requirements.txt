@@ -13,3 +13,4 @@ imageio
 seaborn
 shap
 Pillow
+torchinfo

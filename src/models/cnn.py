@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torchinfo import summary
 
 
 class TennisCNN(nn.Module):
@@ -30,3 +31,9 @@ class TennisCNN(nn.Module):
         x = self.dropout(x)
         x = self.fc3(x)
         return x
+
+
+if __name__ == '__main__':
+    model = TennisCNN(512, 256)
+    batch_size = 8
+    summary(model, input_size=(batch_size, 3, 224, 224))
