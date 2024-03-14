@@ -2,7 +2,7 @@ import requests
 
 # Replace these with your actual playlist ID and API key
 playlist_id = 'PLiDzi8ftbdotqNoWGZhF1fGnv7aqLyb3y'
-api_key = 'AIzaSyBWCsrWOT3coWnXBSVRtlg1Nfx7N3KDdGE'
+api_key = '***************************************'
 next_page_token = None
 video_urls = []
 
